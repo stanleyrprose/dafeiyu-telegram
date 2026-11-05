@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "runtime" / "astrbot" / "data"
+DATA = Path(os.environ.get("DAFEIYU_DATA_DIR", ROOT / "runtime" / "astrbot" / "data"))
 CONFIG = DATA / "cmd_config.json"
-SECRET_DIR = ROOT / "private"
+SECRET_DIR = Path(os.environ.get("DAFEIYU_PRIVATE_DIR", ROOT / "private"))
 BOT_FILE = SECRET_DIR / "telegram" / "bot_token"
 DEPLOY_ENV = SECRET_DIR / "deploy.env"
 OWNER_PATTERN = re.compile(r"[1-9][0-9]{0,19}\Z")
