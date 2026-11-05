@@ -8,6 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from telegram.constants import ChatType
+from astrbot.core.exceptions import EmptyModelOutputError
 from data.plugins.astrbot_plugin_dafeiyu_siwc.main import OwnerTelegramAdapter
 from data.plugins.astrbot_plugin_dafeiyu_siwc.provider import (
     DafeiyuSIWCProvider, SIWCError, _expires_soon, _history,
@@ -65,6 +66,31 @@ class V13ResponseCases(unittest.IsolatedAsyncioTestCase):
         provider = object.__new__(DafeiyuSIWCProvider)
         with self.assertRaises(SIWCError):
             await provider._parse_response(SimpleNamespace(status="incomplete"), None)
+
+    async def test_completed_empty_final_uses_text_deltas(self):
+        provider = object.__new__(DafeiyuSIWCProvider)
+        provider._streamed_text_chunks = ["Hello", "!"]
+        response = SimpleNamespace(
+            status="completed", id="redacted", output=[],
+            usage=SimpleNamespace(input_tokens=8, output_tokens=2,
+                                  input_tokens_details=SimpleNamespace(cached_tokens=0)),
+        )
+        result = await provider._parse_response(response, None)
+        self.assertFalse(result.is_chunk)
+        self.assertEqual(result.completion_text, "Hello!")
+        self.assertEqual(result.usage.output, 2)
+
+    async def test_completed_without_delta_still_fails(self):
+        provider = object.__new__(DafeiyuSIWCProvider)
+        provider._streamed_text_chunks = []
+        with self.assertRaises(EmptyModelOutputError):
+            await provider._parse_response(SimpleNamespace(status="completed", output=[]), None)
+
+    async def test_failed_response_never_reuses_delta(self):
+        provider = object.__new__(DafeiyuSIWCProvider)
+        provider._streamed_text_chunks = ["partial"]
+        with self.assertRaises(SIWCError):
+            await provider._parse_response(SimpleNamespace(status="failed", output=[]), None)
 
 
 if __name__ == "__main__":

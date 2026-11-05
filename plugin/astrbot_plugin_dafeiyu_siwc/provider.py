@@ -9,6 +9,9 @@ import httpx
 
 from astrbot.core.provider.register import register_provider_adapter
 from astrbot.core.provider.sources.openai_responses_source import ProviderOpenAIResponses
+from astrbot.core.exceptions import EmptyModelOutputError
+from astrbot.core.message.message_event_result import MessageChain
+from astrbot.core.provider.entities import LLMResponse, TokenUsage
 from openai import AuthenticationError
 import secrets
 from datetime import datetime, timezone
@@ -166,7 +169,27 @@ class DafeiyuSIWCProvider(ProviderOpenAIResponses):
     async def _parse_response(self, response, tools):
         if self._field(response, "status") != "completed":
             raise SIWCError("Responses 没有成功完成；部分流不能作为完成回答")
-        return await super()._parse_response(response, None)
+        try:
+            return await super()._parse_response(response, None)
+        except EmptyModelOutputError:
+            # Some SIWC models emit text deltas but omit output[] in the
+            # response.completed object. Only reconstruct AFTER completion.
+            text = "".join(self._streamed_text_chunks)
+            if not text.strip():
+                raise
+            usage = self._field(response, "usage")
+            input_details = self._field(usage, "input_tokens_details")
+            cached = self._field(input_details, "cached_tokens", 0) or 0
+            input_count = self._field(usage, "input_tokens", 0) or 0
+            output_count = self._field(usage, "output_tokens", 0) or 0
+            return LLMResponse(
+                "assistant", result_chain=MessageChain().message(text),
+                id=self._field(response, "id"), raw_completion=response,
+                usage=TokenUsage(
+                    input_other=max(0, input_count - cached),
+                    input_cached=cached, output=output_count,
+                ),
+            )
 
     async def text_chat_stream(
         self, prompt=None, session_id=None, image_urls=None, audio_urls=None,
@@ -178,6 +201,7 @@ class DafeiyuSIWCProvider(ProviderOpenAIResponses):
         # A single total deadline covers queueing, refresh and the entire SSE stream.
         async with asyncio.timeout(120):
             async with self._request_gate:
+                self._streamed_text_chunks = []
                 previous = _history(self, contexts)
                 request, _ = await self._prepare_chat_payload(
                     prompt=prompt,
@@ -192,6 +216,8 @@ class DafeiyuSIWCProvider(ProviderOpenAIResponses):
                     emitted = False
                     try:
                         async for response in self._query_stream(request.copy(), None, request_max_retries=1):
+                            if response.is_chunk and response.completion_text:
+                                self._streamed_text_chunks.append(response.completion_text)
                             emitted = True
                             yield response
                         return
