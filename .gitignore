@@ -5,3 +5,9 @@ __pycache__/
 *.bak
 .serena/
 .memory-observatory/
+
+# Telegram/SIWC runtime data must never enter Git
+private/
+data/
+.env
+.env.*
