@@ -9,5 +9,6 @@ __pycache__/
 # Telegram/SIWC runtime data must never enter Git
 private/
 data/
+runtime/
 .env
 .env.*

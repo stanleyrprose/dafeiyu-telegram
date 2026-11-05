@@ -1,0 +1,7 @@
+name: astrbot_plugin_dafeiyu_siwc
+display_name: 大肥鱼 Telegram + SIWC
+desc: 使用 AstrBot 原生 Telegram 和 ChatGPT SIWC Provider；仅主人私聊
+version: v1.3.0
+author: dafeiyu-adaptation
+support_platforms:
+  - telegram_owner
