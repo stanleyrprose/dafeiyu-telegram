@@ -2,24 +2,25 @@
 
 ## 结论和边界
 
-当前数据库的读写测试通过，但没有复现和解释此前的 `database disk image is malformed`；真实 Telegram 聊天历史持久化仍未通过。两者不能混同。
+在原 Mac bind mount 上，2026-11-05 11:35:48 和 11:41:58 UTC 的两条 Telegram 入站事件均触发 SQLite `DatabaseError`，没有进入 SIWC LLM。保留原数据与一致性备份后，已把 AstrBot 数据目录迁入 Linux Docker 本地 Volume `dafeiyu_telegram_data`。迁移后两轮真实计算对话已正常处理、4 次 SIWC 调用均为 `completed`，其中 8 条历史消息成功落库，并在容器重启后完整保留。**重启之后的全新 Telegram 入站回复尚需用户再次确认**。Mac bind mount + WAL 为合理怀疑，尚未通过隔离对照实验严格证明因果。
 
 ## 证据
 
 - AstrBot v4.29.4 在 Owner 消息处理期间，从 SessionServiceManager → SharedPreferences.get_async → SQLiteDatabase.get_preference 报过 sqlite3.DatabaseError 和 sqlalchemy.exc.DatabaseError，原始日志包含 `database disk image is malformed`。
-- 当前文件为 runtime/astrbot/data/data_v4.db，journal_mode=wal；Mac 和容器内 integrity_check 均为 ok，preferences 表可读取。
-- 使用 SQLite Online Backup API 在 Git 忽略的 private/db-backups/ 建立快照，备份 integrity_check=ok，文件 0600。
+- 迁移前数据库位于 Mac `runtime/astrbot/data/data_v4.db`，WAL 模式，文件完整性检查为 `ok`，但旧应用连接查询偏好时反复出错；新 ORM 连接可以读取。
+- 迁移前已用 SQLite Online Backup API 在 Git 忽略的 `private/db-backups/` 建立一致快照并校验 `ok`；迁移后再次备份 Linux Volume，校验也为 `ok`。旧 Mac 数据目录没有删除。
 - 容器内使用相同 ORM 读取 Owner 会话偏好连续三次成功。
 - 容器内使用唯一临时偏好记录做提交、全新连接读回、精确删除，均成功；没有触碰真实用户内容。
 - **进一步验证 conversations 表的真实 ORM 路径**：创建一条合成测试会话、更新两轮合成消息、使用新的 ORM engine 读取并核对内容、精准删除及清理后查询，全部通过。测试不涉及真实聊天内容。
-- 检查时 conversations、provider_stats 和 platform_stats 的行数仍为 0，因此真实聊天历史保存尚未被证明。
-- 未清库、未执行 VACUUM、未改 Schema、未移动 SQLite 文件或更改 AstrBot 内核。
+- 迁入 Volume 时 `cmd_config.json` 与 `data_v4.db` 逐字节核对一致，新容器确认挂载类型 `volume`、名称正确，WebUI 返回 200，插件加载。容器内再次通过临时偏好与合成会话的 ORM 写入、读回和清理。
+- 迁移后真实 Telegram 会话写入 **4 条 User + 4 条 Assistant** 消息，匹配两轮计算问题：8+5→13、刚才的结果加2→15；`provider_stats` 有 4 条 `completed`。重启后 1 条会话、8 条历史及 4 条成功调用仍在，`integrity_check=ok`，未再观察到 SQLite 错误。
+- 重启时曾出现单次 Telegram `NetworkError`；原生适配器的长轮询已启动，内建网络恢复机制，无重复失败的证据。仍需用**重启后新消息**确认连接可持续处理。
+- 未清库、未执行 VACUUM、未改 Schema、未改 AstrBot 内核。迁移改变了活动数据库的存储位置，但保留了原始 Mac 数据副本、完整备份和可回滚 Compose 配置。
 
 ## 最小剩余验收
 
-1. Owner 给 Telegram Bot 发送新文字，确认收到明确模型生成的答复，再追问上一轮内容。
-2. 只从容器内部核对 conversations 非空历史行数、provider_stats、异常类型，不输出聊天正文或 Token。
-3. 重启新容器后确认上下文能延续，且没有新的 DatabaseError。若故障复现，再依证据评估 macOS Docker Desktop bind mount 与 SQLite WAL，而非提前迁移 Docker Volume。
-4. 只有真实持久化与重启恢复均通过，才解除该项验收门禁。
+1. 真实对话保存与容器重启后历史保留均已通过；不需重复清库或迁移。
+2. Owner 在**重启后**再发送一条消息，确认机器人继续回复；从容器日志和数据库检查没有新的 `DatabaseError` 或连续 Telegram 网络失败。
+3. 在没有明确的后续失败证据前，不再修改网络重试逻辑或增加守护服务。仅当重启后新消息也能往返时，才把本轮故障修复标记为完整通过。
 
-脚本：scripts/backup_sqlite_db.py（在线快照）；scripts/verify_sqlite_persistence.py（仅在固定版本 AstrBot 容器内主动使用，临时测试偏好项）。
+脚本：`scripts/backup_sqlite_db.py`（直接从 Linux Docker Volume 通过 SQLite Online Backup 生成私有快照）；`scripts/verify_sqlite_persistence.py`（仅在固定版本 AstrBot 容器内运行，使用临时偏好与合成会话，不触碰真实用户内容）。

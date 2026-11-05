@@ -12,8 +12,14 @@ services:
       DAFEIYU_RHYTHM_HOUR: ${DAFEIYU_RHYTHM_HOUR:-10}
       DAFEIYU_RHYTHM_TZ: ${DAFEIYU_RHYTHM_TZ:-Asia/Shanghai}
     volumes:
-      - ../../runtime/astrbot/data:/AstrBot/data
+      - dafeiyu_data:/AstrBot/data
       - ../../private/oauth:/AstrBot/private/oauth
       - ../../plugin/astrbot_plugin_dafeiyu_siwc:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_siwc:ro
       - ../../plugin/astrbot_plugin_dafeiyu_local_life:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_local_life:ro
       - ../../persona/大肥鱼-Telegram.md:/AstrBot/persona/dafeiyu.md:ro
+
+# Linux-managed volume avoids SQLite WAL/mmap reads on macOS bind mounts.
+volumes:
+  dafeiyu_data:
+    name: dafeiyu_telegram_data
+    external: true

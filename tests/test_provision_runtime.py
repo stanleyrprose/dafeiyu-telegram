@@ -84,6 +84,15 @@ class ProvisionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             PROVISION.main()
 
+    def test_compose_uses_linux_volume_for_sqlite(self):
+        compose = (
+            SCRIPT.parents[1] / "deploy" / "telegram" / "compose.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertIn("dafeiyu_data:/AstrBot/data", compose)
+        self.assertIn("name: dafeiyu_telegram_data", compose)
+        self.assertIn("external: true", compose)
+        self.assertNotIn("../../runtime/astrbot/data:/AstrBot/data", compose)
+
 
 if __name__ == "__main__":
     unittest.main()
