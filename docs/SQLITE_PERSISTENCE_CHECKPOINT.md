@@ -15,6 +15,7 @@
 - 迁入 Volume 时 `cmd_config.json` 与 `data_v4.db` 逐字节核对一致，新容器确认挂载类型 `volume`、名称正确，WebUI 返回 200，插件加载。容器内再次通过临时偏好与合成会话的 ORM 写入、读回和清理。
 - 迁移后真实 Telegram 会话写入 **4 条 User + 4 条 Assistant** 消息，匹配两轮计算问题：8+5→13、刚才的结果加2→15；`provider_stats` 有 4 条 `completed`。重启后 1 条会话、8 条历史及 4 条成功调用仍在，`integrity_check=ok`，未再观察到 SQLite 错误。
 - 重启时曾出现单次 Telegram `NetworkError`；原生适配器的长轮询已启动，内建网络恢复机制，无重复失败的证据。仍需用**重启后新消息**确认连接可持续处理。
+- 晚间复核快照（2026-11-05）：容器持续运行约 2 小时，`conversations=1`、历史消息 `18` 条、`provider_stats` 为 `9` 次 `completed`，数据库 `quick_check=ok`，未观察到新的插件加载失败。此为当时的累计计数，不代表重启后一定有新入站请求。受影响路径验收：纯 Python 9 项通过；AstrBot 依赖测试 8 项在 CI 入口明确 skip，并在固定版本 AstrBot 容器内 8/8 通过；ORM 临时偏好/会话持久化测试通过。
 - 未清库、未执行 VACUUM、未改 Schema、未改 AstrBot 内核。迁移改变了活动数据库的存储位置，但保留了原始 Mac 数据副本、完整备份和可回滚 Compose 配置。
 
 ## 最小剩余验收
