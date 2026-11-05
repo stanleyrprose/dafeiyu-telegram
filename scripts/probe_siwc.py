@@ -91,6 +91,16 @@ def _handler_class():
     class CallbackHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             parts = urlsplit(self.path)
+            if parts.path == "/auth/start":
+                auth_url = getattr(self.server, "auth_url", None)
+                if not auth_url:
+                    self.send_error(503)
+                    return
+                self.send_response(302)
+                self.send_header("Location", auth_url)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
             if parts.path != CALLBACK_PATH:
                 self.send_error(404)
                 return
@@ -204,6 +214,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="macOS 本机一次性 ChatGPT SIWC 登录与资格验证")
     parser.add_argument("--directory", type=Path, default=Path(__file__).resolve().parents[1] / "private" / "oauth")
     parser.add_argument("--model", help="从当前账号模型目录选择可见模型 slug；默认第一个可见模型")
+    parser.add_argument("--phone-browser", action="store_true", help="通过 Termux SSH 端口转发，在手机浏览器完成授权")
+    parser.add_argument("--phone-port", type=int, default=18765, help="手机 SSH 回调转发端口（默认 18765）")
     args = parser.parse_args()
     directory = args.directory.expanduser().resolve()
     credentials_path = directory / "credentials.json"
@@ -220,7 +232,9 @@ def main() -> int:
     verifier = _b64(secrets.token_bytes(48))
     challenge = _b64(hashlib.sha256(verifier.encode("ascii")).digest())
     state, nonce = _b64(secrets.token_bytes(32)), _b64(secrets.token_bytes(32))
-    server = HTTPServer(("127.0.0.1", 0), _handler_class())
+    if args.phone_browser and not 1024 <= args.phone_port <= 65535:
+        raise ProbeError("手机回调端口必须在 1024–65535 范围内")
+    server = HTTPServer(("127.0.0.1", args.phone_port if args.phone_browser else 0), _handler_class())
     try:
         redirect = f"http://127.0.0.1:{server.server_port}{CALLBACK_PATH}"
         args_url = {
@@ -237,12 +251,18 @@ def main() -> int:
         }
         if not client_id:
             args_url["agent_name_hint"] = APP_NAME
-        if old.get("id_token") and client_id:
+        if old.get("id_token") and client_id and not args.phone_browser:
             args_url["id_token_hint"] = old["id_token"]
         url = AUTH_URL + "?" + urlencode(args_url)
-        print("正在打开本机浏览器进行 ChatGPT 授权（不会输出授权 URL 或 Token）...")
-        if not webbrowser.open(url):
-            raise ProbeError("无法打开浏览器。请在 Mac 图形桌面运行此命令")
+        if args.phone_browser:
+            server.auth_url = url
+            print(f"手机授权模式：请保持 SSH -L 127.0.0.1:{args.phone_port}:127.0.0.1:{args.phone_port} 端口转发连接。", flush=True)
+            print(f"用手机浏览器打开：http://127.0.0.1:{args.phone_port}/auth/start", flush=True)
+            print("浏览器将跳转至 OpenAI 登录页，授权完成后自动回到本机回调。", flush=True)
+        else:
+            print("正在打开本机浏览器进行 ChatGPT 授权（不会输出授权 URL 或 Token）...", flush=True)
+            if not webbrowser.open(url):
+                raise ProbeError("无法打开浏览器。请在 Mac 图形桌面运行此命令")
         callback = _callback(server, state)
     finally:
         server.server_close()

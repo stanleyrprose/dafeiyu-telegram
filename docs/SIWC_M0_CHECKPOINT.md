@@ -21,21 +21,38 @@
 
 ## M0-B, human action required
 
-The following commands are intended for the logged-in Mac mini desktop session, **not for unattended/background execution**:
+The CLI supports both local Mac desktop login and Android Termux over SSH. The script and credentials always run/stay on the Mac. Python virtualenv and dependencies are already installed locally.
+
+**Mac desktop browser:**
 
 ```sh
 cd /Users/xu/Documents/mcpx-projects/dafeiyu-telegram
-python3 -m venv .venv
-.venv/bin/python -m pip install -r scripts/requirements-siwc.txt
 .venv/bin/python scripts/probe_siwc.py
 ```
 
-- The script opens the Mac system browser for the user to sign in, grant the requested permission and complete consent.
+**Android Termux → SSH → Mac mini (phone browser):**
+
+First, stop any existing Mac probe with Ctrl+C and exit the old SSH session. Then start a **new** SSH session with local TCP forwarding (run this in Termux on the phone):
+
+```sh
+ssh -o ExitOnForwardFailure=yes -L 127.0.0.1:18765:127.0.0.1:18765 macmini
+```
+
+In that SSH session run:
+
+```sh
+cd /Users/xu/Documents/mcpx-projects/dafeiyu-telegram
+.venv/bin/python scripts/probe_siwc.py --phone-browser
+```
+
+The script listens on the Mac's `127.0.0.1:18765` and serves the short local URL `http://127.0.0.1:18765/auth/start`. Open this URL in the **phone** browser; it redirects directly to the OpenAI authorization page without printing the full URL. Its `http://127.0.0.1:18765/auth/callback` redirect goes into Termux's SSH forwarded port, then to the Mac's listener. Keep the SSH session alive until the probe returns. Do not paste or screenshot the authorization URL, callback code, or credentials. Phone mode suppresses the optional `id_token_hint`; the full authorization URL stays inside the Mac process.
+
+If the tunnel fails or the callback times out, re-establish the `ssh -L` session and rerun the script; each attempt uses fresh PKCE/state/nonce. Neither phone nor container stores the OAuth tokens.
 - It verifies issued `client_id`, OIDC identity and `chatgpt.tokens.use.direct`, queries the per-account `/v1/models` catalog, and requires `response.completed` from one minimal `/v1/responses` stream.
 - On success the local private `private/oauth/credentials.json` is written atomically with owner-only permissions; `private/` is git-ignored.
 - Credentials, authorization URLs, callback codes and token responses must never be pasted into ChatGPT or committed.
 - On HTTP 403/scope denial: No-Go for current eligibility. On transient network errors: Inconclusive, not a permanent No-Go.
-- The source code and Python syntax have been inspected; **no real OAuth, model invocation, package install or end-to-end test has been performed yet.**
+- The source code and Python syntax have been inspected; virtualenv and script dependencies installed on Mac; **no real OAuth, model invocation or end-to-end test has been performed yet.**
 
 ## Next authorized step after successful M0-B
 
