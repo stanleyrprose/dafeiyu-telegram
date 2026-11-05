@@ -33,7 +33,7 @@ python3 scripts/setup_telegram_credentials.py
 1. 运行上面的安全配置脚本；它会创建 `private/deploy.env`（Owner ID）和私有 Bot Token 文件。文件位于 Git 忽略目录，不要上传任何 Bot Token 到代码仓库。
 2. 确保 `private/oauth/credentials.json` 已存在（M0-B 通过）。不要手工复制其内容。
 3. 在项目根目录按需建立 `runtime/astrbot/data`；确保 `private/oauth` 是可读写目录（非单文件只读挂载）。本地文件权限目标分别 0700/0600。
-4. Docker Compose 文件：`deploy/telegram/compose.yaml`，运行时指定 `--env-file private/deploy.env`。**不要同时运行原 QQ/NapCat 编排**。
+4. 首次运行先使用 `docker compose --env-file private/deploy.env -f deploy/telegram/compose.yaml up -d` 启动无 Telegram 平台的默认 AstrBot，确保 `runtime/astrbot/data/cmd_config.json` 自动生成，然后先停止该容器。在停止状态下运行 `python3 scripts/provision_telegram_runtime.py`，它会把已保存的 Bot Token 安全写入仅本机的私有 AstrBot 配置，同时配置 Owner 私聊白名单和 SIWC Provider，**不会输出 Token**。再次通过相同 Compose 命令启动服务。不要同时运行原 QQ/NapCat 编排。
 5. 在 Mac 本机访问 `http://127.0.0.1:6185`，修改初始管理密码。只绑定 Mac loopback；远程手机可通过 Termux SSH 的 `-L 127.0.0.1:6185:127.0.0.1:6185` 端口转发访问。
 6. WebUI → 机器人 → 新建：类型 **telegram_owner**，**ID 必须为 `telegram_owner`**，填入单独创建的 Telegram Bot Token，启用 Long Polling。该 Token 只放在私有 AstrBot 配置中。不要使用原 Telegram Bot 的 Token 与另一个轮询进程同时启动，否则更新会冲突。
 7. WebUI → 模型服务 → 新建：类型 `dafeiyu_siwc`，实例 ID 可用 `dafeiyu_siwc`，启用并设为聊天模型。代码从私有凭据读取模型，不使用商业 API Key。
