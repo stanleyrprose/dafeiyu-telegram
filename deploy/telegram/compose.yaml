@@ -1,0 +1,25 @@
+# 单容器自用方案。不要复用 deploy/compose.yaml（旧 QQ/NapCat 配置）。
+services:
+  astrbot:
+    image: soulter/astrbot:v4.29.4
+    container_name: dafeiyu-telegram
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6185:6185"
+    environment:
+      TZ: ${DAFEIYU_TZ:-Asia/Shanghai}
+      DAFEIYU_OWNER_USER_ID: ${DAFEIYU_OWNER_USER_ID:?Set your Telegram numeric user ID}
+      DAFEIYU_RHYTHM_HOUR: ${DAFEIYU_RHYTHM_HOUR:-10}
+      DAFEIYU_RHYTHM_TZ: ${DAFEIYU_RHYTHM_TZ:-Asia/Shanghai}
+    volumes:
+      - dafeiyu_data:/AstrBot/data
+      - ../../private/oauth:/AstrBot/private/oauth
+      - ../../plugin/astrbot_plugin_dafeiyu_siwc:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_siwc:ro
+      - ../../plugin/astrbot_plugin_dafeiyu_local_life:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_local_life:ro
+      - ../../persona/大肥鱼-Telegram.md:/AstrBot/persona/dafeiyu.md:ro
+
+# Linux-managed volume avoids SQLite WAL/mmap reads on macOS bind mounts.
+volumes:
+  dafeiyu_data:
+    name: dafeiyu_telegram_data
+    external: true
