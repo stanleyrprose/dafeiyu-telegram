@@ -2,7 +2,7 @@
 
 ## 结论和边界
 
-在原 Mac bind mount 上，2026-11-05 11:35:48 和 11:41:58 UTC 的两条 Telegram 入站事件均触发 SQLite `DatabaseError`，没有进入 SIWC LLM。保留原数据与一致性备份后，已把 AstrBot 数据目录迁入 Linux Docker 本地 Volume `dafeiyu_telegram_data`。迁移后两轮真实计算对话已正常处理、4 次 SIWC 调用均为 `completed`，其中 8 条历史消息成功落库，并在容器重启后完整保留。**重启之后的全新 Telegram 入站回复尚需用户再次确认**。Mac bind mount + WAL 为合理怀疑，尚未通过隔离对照实验严格证明因果。
+在原 Mac bind mount 上，2026-11-05 11:35:48 和 11:41:58 UTC 的两条 Telegram 入站事件均触发 SQLite `DatabaseError`，没有进入 SIWC LLM。保留原数据与一致性备份后，已把 AstrBot 数据目录迁入 Linux Docker 本地 Volume `dafeiyu_telegram_data`。迁移后两轮真实计算对话已正常处理、4 次 SIWC 调用均为 `completed`，其中 8 条历史消息成功落库，并在容器重启后完整保留。重启后已观察到 **5 次新增的成功 SIWC 模型调用**，未再出现 SQLite 错误；用户侧对重启后最新消息的显示尚未进行第二次独立确认。Mac bind mount + WAL 为合理怀疑，尚未通过隔离对照实验严格证明因果。
 
 ## 证据
 
@@ -14,7 +14,7 @@
 - **进一步验证 conversations 表的真实 ORM 路径**：创建一条合成测试会话、更新两轮合成消息、使用新的 ORM engine 读取并核对内容、精准删除及清理后查询，全部通过。测试不涉及真实聊天内容。
 - 迁入 Volume 时 `cmd_config.json` 与 `data_v4.db` 逐字节核对一致，新容器确认挂载类型 `volume`、名称正确，WebUI 返回 200，插件加载。容器内再次通过临时偏好与合成会话的 ORM 写入、读回和清理。
 - 迁移后真实 Telegram 会话写入 **4 条 User + 4 条 Assistant** 消息，匹配两轮计算问题：8+5→13、刚才的结果加2→15；`provider_stats` 有 4 条 `completed`。重启后 1 条会话、8 条历史及 4 条成功调用仍在，`integrity_check=ok`，未再观察到 SQLite 错误。
-- 重启时曾出现单次 Telegram `NetworkError`；原生适配器的长轮询已启动，内建网络恢复机制，无重复失败的证据。仍需用**重启后新消息**确认连接可持续处理。
+- 重启时曾出现单次 Telegram `NetworkError`；原生适配器的长轮询已启动，内建网络恢复机制，无重复失败的证据。重启后已观察到新的成功推理，仍需用户侧确认显示。
 - 晚间复核快照（2026-11-05）：容器持续运行约 2 小时，`conversations=1`、历史消息 `18` 条、`provider_stats` 为 `9` 次 `completed`，数据库 `quick_check=ok`，未观察到新的插件加载失败。此为当时的累计计数，不代表重启后一定有新入站请求。受影响路径验收：纯 Python 9 项通过；AstrBot 依赖测试 8 项在 CI 入口明确 skip，并在固定版本 AstrBot 容器内 8/8 通过；ORM 临时偏好/会话持久化测试通过。
 - 未清库、未执行 VACUUM、未改 Schema、未改 AstrBot 内核。迁移改变了活动数据库的存储位置，但保留了原始 Mac 数据副本、完整备份和可回滚 Compose 配置。
 
