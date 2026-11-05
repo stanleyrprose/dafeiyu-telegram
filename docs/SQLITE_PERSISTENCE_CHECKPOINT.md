@@ -11,6 +11,7 @@
 - 使用 SQLite Online Backup API 在 Git 忽略的 private/db-backups/ 建立快照，备份 integrity_check=ok，文件 0600。
 - 容器内使用相同 ORM 读取 Owner 会话偏好连续三次成功。
 - 容器内使用唯一临时偏好记录做提交、全新连接读回、精确删除，均成功；没有触碰真实用户内容。
+- **进一步验证 conversations 表的真实 ORM 路径**：创建一条合成测试会话、更新两轮合成消息、使用新的 ORM engine 读取并核对内容、精准删除及清理后查询，全部通过。测试不涉及真实聊天内容。
 - 检查时 conversations、provider_stats 和 platform_stats 的行数仍为 0，因此真实聊天历史保存尚未被证明。
 - 未清库、未执行 VACUUM、未改 Schema、未移动 SQLite 文件或更改 AstrBot 内核。
 

@@ -57,6 +57,49 @@ async def main() -> None:
         print("probe_cleanup_confirmed:", absent is None)
     finally:
         await check.engine.dispose()
+    await verify_conversation()
+
+
+async def verify_conversation() -> None:
+    """Check AstrBot's real conversation create/update/reload/delete path."""
+    db = await make_db()
+    reader = None
+    conversation_id = None
+    try:
+        record = await db.create_conversation(
+            user_id="diagnostic:" + secrets.token_hex(12),
+            platform_id="diagnostic",
+            content=[{"role": "user", "content": "probe"}],
+        )
+        conversation_id = record.conversation_id
+        await db.update_conversation(
+            conversation_id,
+            content=[{"role": "user", "content": "probe"},
+                     {"role": "assistant", "content": "ok"}],
+        )
+        await db.engine.dispose()
+        reader = await make_db()
+        retrieved = await reader.get_conversation_by_id(conversation_id)
+        content = retrieved.content if retrieved else []
+        print("conversation_persistent_read:",
+              len(content) == 2 and content[1].get("content") == "ok")
+    finally:
+        cleaner = await make_db()
+        try:
+            if conversation_id:
+                await cleaner.delete_conversation(conversation_id)
+        finally:
+            await cleaner.engine.dispose()
+        if reader:
+            await reader.engine.dispose()
+        await db.engine.dispose()
+    check = await make_db()
+    try:
+        missing = await check.get_conversation_by_id(conversation_id)
+        print("conversation_cleanup_confirmed:", missing is None)
+    finally:
+        await check.engine.dispose()
+
 
 if __name__ == "__main__":
     try:
