@@ -1,0 +1,28 @@
+name: Repository scaffold / application CI gate
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scaffold policy files
+        run: |
+          test -f README.md
+          test -f AGENTS.md
+      - name: Project-specific tests
+        shell: bash
+        run: |
+          if [ -f .github/project-tests.sh ]; then
+            bash .github/project-tests.sh
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "::error::Add .github/project-tests.sh with real project tests before PR acceptance."
+            exit 1
+          else
+            echo "::warning::Scaffold check only; application CI not configured."
+          fi
