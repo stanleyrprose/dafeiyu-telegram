@@ -1,5 +1,7 @@
 # 🐋 大肥鱼 · AstrBot QQ 机器人全家桶
 
+> **Telegram + ChatGPT SIWC 单用户适配分支：**参见 [Mac mini 部署与恢复指南](deploy/telegram/README.md)。下文是上游 QQ/NapCat 方案的原始介绍，**不是**新适配版的部署指令；新版本尚未运行时验收或部署。
+
 > 一只住在 QQ 里的蓝色鲸鱼娘：会看、会听、会说话、有记忆、会主动找你，
 > 还能进群和你的朋友打成一片，也会嘴硬地催你吃饭。基于 **AstrBot + NapCat + DeepSeek + 阿里云百炼** 搭建。
 
