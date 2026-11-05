@@ -1,0 +1,7 @@
+name: astrbot_plugin_dafeiyu_local_life
+display_name: 大肥鱼本地记忆与节律
+desc: 本地记忆指令、人格提示词注入和单次每日节律提醒
+version: v1.3.0
+author: dafeiyu-adaptation
+support_platforms:
+  - telegram_owner

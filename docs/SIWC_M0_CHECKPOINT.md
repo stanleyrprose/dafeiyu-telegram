@@ -1,6 +1,6 @@
 # M0 checkpoint — Dafeiyu Telegram + ChatGPT SIWC (2026-11-05)
 
-**Status: M0 static portion prepared; M0-B live account eligibility NOT RUN. M1/M2 not authorized to start until M0 passes.**
+**Status (2026-11-05): M0-B passed (user-reported scope + model gpt-6.1-sol + response.completed; private credential file verified present without reading it). M1/M2 development source drafted locally; no runtime acceptance or deployment yet.**
 
 ## Project / rules
 
@@ -52,11 +52,11 @@ If the tunnel fails or the callback times out, re-establish the `ssh -L` session
 - On success the local private `private/oauth/credentials.json` is written atomically with owner-only permissions; `private/` is git-ignored.
 - Credentials, authorization URLs, callback codes and token responses must never be pasted into ChatGPT or committed.
 - On HTTP 403/scope denial: No-Go for current eligibility. On transient network errors: Inconclusive, not a permanent No-Go.
-- The source code and Python syntax have been inspected; virtualenv and script dependencies installed on Mac; **no real OAuth, model invocation or end-to-end test has been performed yet.**
+- On 2026-11-05 user completed phone-assisted SIWC login and reported `M0-B 通过` with `gpt-6.1-sol` and `response.completed`. No production Telegram, Docker, or provider integration acceptance was run.
 
-## Next authorized step after successful M0-B
+## M1/M2 development checkpoint
 
-M1: dedicated single-container config with no NapCat and no old core patches; native Telegram owner/private entry control, SIWC text-only Provider reading and refreshing the above local credential file, preserved persona. M2: new local-life thin plugin for memory prompt and one rhythm notification. Full affected-path acceptance occurs after complete development and separately approved verification; PR/CI/merge only afterward.
+A dedicated Compose, native Telegram owner-only adapter, SIWC text Provider, revised persona, and local memory/rhythm plugin have been authored in `feat/telegram-siwc-v1.3`. They are **not yet runtime-verified or deployed**. Exact deployment and rollback procedure is in `deploy/telegram/README.md`. Final affected-path acceptance and subsequent PR/CI/merge remain separate gates.
 
 ## Git remote policy
 
