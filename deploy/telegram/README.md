@@ -62,7 +62,7 @@ python3 scripts/setup_telegram_credentials.py
 - 仅停止新 `dafeiyu-telegram` 容器，保留 `runtime/` 和 `private/` 数据；不要使用 `down -v`，更不要操作旧 QQ 目录。
 - 不修改 upstream `deploy/compose.yaml`、不运行 NapCat 或外挂内核补丁。
 - 开发期允许静态检查和局部提交，但按当前用户工程约束 **不运行单测、PR、CI、Merge 或生产部署**；代码完成后的独立最终验收阶段集中完成测试/修复/发布。
-- Git 原始 `origin` 是第三方 whyever77 仓库，严禁向其推送；后续需另设本人控制的远程 SOT 再 Push。
+- Git `origin` 已指向本人 PUBLIC 仓库 `stanleyrprose/dafeiyu-telegram`，`upstream` 保留第三方 `whyever77/dafeiyu-astrbot`。开发分支已 Push；公共 `main` 仍是安全模板，首轮 PR 的上游历史基线需要在最终验收阶段处理。不得向 `upstream` Push，也不得提前触发 PR/CI/Merge。
 
 ## 待验收项（不是已通过证据）
 
