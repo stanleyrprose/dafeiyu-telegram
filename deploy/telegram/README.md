@@ -13,9 +13,24 @@
 - `private/oauth/`：宿主机私有可写目录，包含 OAuth 授权文件，**禁止提交或发送**。
 - `runtime/astrbot/data/`：全新的 AstrBot 会话/插件数据目录，**禁止混入旧 QQ 数据**。
 
+## 通过手机 Termux → SSH 安全配置 Telegram 凭据
+
+在**已经连接 Mac mini 的 SSH 终端**运行：
+
+```sh
+cd /Users/xu/Documents/mcpx-projects/dafeiyu-telegram
+python3 scripts/setup_telegram_credentials.py
+```
+
+- 先输入自己的 **Telegram 数字 User ID**（不是 Bot ID），再粘贴 BotFather 给你的 Token。脚本使用 `getpass` 关闭终端回显，不会把 Token 作为 shell 命令参数、环境变量或日志输出。
+- Token 仅写在 Mac 的 `private/telegram/bot_token`，Owner ID 写入 `private/deploy.env`；私有文件夹设置为 0700，文件设置为 0600，且 `private/` 已被 Git 忽略。
+- 已有 Token 时必须明确输入 `REPLACE` 才会覆盖。**不要把任何 Token、文件正文或截图发送给 ChatGPT。**
+- 本脚本只做本机安全保存和格式检查，**不向 Telegram 发请求，也不自动填写 AstrBot WebUI 的 Bot Token**。最终启用机器人仍需要在本机私有 AstrBot 配置中设置 Token；不要把该私有文件内容提交到 Git。
+- 手机剪贴板可能暂存 Token，粘贴后建议清除剪贴板。成功后只需告诉 ChatGPT“Telegram 凭据已配置”，我可以不读取文件内容，仅检查路径是否存在以及权限是否正确。
+
 ## 待开发完成且授权正式部署后（此处仅给操作方法）
 
-1. 在 Mac 创建 `private/deploy.env`，写入 `DAFEIYU_OWNER_USER_ID=<纯数字 Telegram 用户 ID>`。文件位于 Git 忽略目录，不要上传任何 Bot Token 到代码仓库。
+1. 运行上面的安全配置脚本；它会创建 `private/deploy.env`（Owner ID）和私有 Bot Token 文件。文件位于 Git 忽略目录，不要上传任何 Bot Token 到代码仓库。
 2. 确保 `private/oauth/credentials.json` 已存在（M0-B 通过）。不要手工复制其内容。
 3. 在项目根目录按需建立 `runtime/astrbot/data`；确保 `private/oauth` 是可读写目录（非单文件只读挂载）。本地文件权限目标分别 0700/0600。
 4. Docker Compose 文件：`deploy/telegram/compose.yaml`，运行时指定 `--env-file private/deploy.env`。**不要同时运行原 QQ/NapCat 编排**。
