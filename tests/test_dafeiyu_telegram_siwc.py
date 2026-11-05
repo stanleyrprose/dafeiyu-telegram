@@ -8,11 +8,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from telegram.constants import ChatType
-from plugin.astrbot_plugin_dafeiyu_siwc.main import OwnerTelegramAdapter
-from plugin.astrbot_plugin_dafeiyu_siwc.provider import (
+from data.plugins.astrbot_plugin_dafeiyu_siwc.main import OwnerTelegramAdapter
+from data.plugins.astrbot_plugin_dafeiyu_siwc.provider import (
     DafeiyuSIWCProvider, SIWCError, _expires_soon, _history,
 )
-from plugin.astrbot_plugin_dafeiyu_local_life.main import LocalLife
+from data.plugins.astrbot_plugin_dafeiyu_local_life.main import LocalLife
 
 
 class V13PureCases(unittest.TestCase):

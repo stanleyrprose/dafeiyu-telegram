@@ -67,7 +67,7 @@ def main() -> int:
         raise ValueError("BotFather 凭据格式无效")
     if not CONFIG.is_file() or CONFIG.is_symlink():
         raise ValueError("AstrBot 尚未生成默认运行配置，请先完成无平台的首次启动")
-    existing = json.loads(CONFIG.read_text(encoding="utf-8"))
+    existing = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
     if not isinstance(existing, dict):
         raise ValueError("AstrBot 运行配置无效")
     platform = dict(
