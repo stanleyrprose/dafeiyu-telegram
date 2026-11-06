@@ -1,0 +1,8 @@
+# Strict allowlist: NEVER send private OAuth files, runtime databases or chats to Docker build context.
+**
+!deploy/
+!deploy/telegram/
+!deploy/telegram/Dockerfile
+!plugin/
+!plugin/astrbot_plugin_dafeiyu_local_life/
+!plugin/astrbot_plugin_dafeiyu_local_life/requirements.txt

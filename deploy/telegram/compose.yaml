@@ -1,13 +1,17 @@
 # 单容器自用方案。不要复用 deploy/compose.yaml（旧 QQ/NapCat 配置）。
 services:
   astrbot:
-    image: soulter/astrbot:v4.29.4
+    build:
+      context: ../..
+      dockerfile: deploy/telegram/Dockerfile
+    image: dafeiyu-telegram-runtime:v2.0.0
     container_name: dafeiyu-telegram
     restart: unless-stopped
     ports:
       - "127.0.0.1:6185:6185"
     environment:
       TZ: ${DAFEIYU_TZ:-Asia/Shanghai}
+      DAFEIYU_TZ: ${DAFEIYU_TZ:-Asia/Shanghai}
       DAFEIYU_OWNER_USER_ID: ${DAFEIYU_OWNER_USER_ID:?Set your Telegram numeric user ID}
       DAFEIYU_RHYTHM_HOUR: ${DAFEIYU_RHYTHM_HOUR:-10}
       DAFEIYU_RHYTHM_TZ: ${DAFEIYU_RHYTHM_TZ:-Asia/Shanghai}
