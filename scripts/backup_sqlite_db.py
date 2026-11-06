@@ -7,6 +7,7 @@ Backups are stored under private/db-backups/ with owner-only permissions.
 from __future__ import annotations
 
 import os
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -46,9 +47,49 @@ def write_backup() -> None:
         raise
 
 
+def backup_life_state(
+    folder: Path = Path("/data/plugin_data/dafeiyu_local_life"),
+    backups: Path = Path("/backups"),
+) -> None:
+    """Preserve P1/P2 state and old notes alongside the core snapshot."""
+    label = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    database = folder / "state.sqlite3"
+    if database.is_file() and not database.is_symlink():
+        destination = backups / ("life-state-" + label + ".sqlite3")
+        fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(fd)
+        try:
+            with sqlite3.connect(f"file:{database}?mode=ro", uri=True, timeout=30) as src:
+                with sqlite3.connect(destination, timeout=30) as dst:
+                    src.backup(dst)
+                    check = dst.execute("PRAGMA integrity_check").fetchone()[0]
+            if check != "ok":
+                raise RuntimeError("Local life state backup failed validation")
+            os.chmod(destination, 0o600)
+            print("local_life_state_backup:", "ok")
+        except BaseException:
+            destination.unlink(missing_ok=True)
+            raise
+    notes = folder / "notes.json"
+    if notes.is_file() and not notes.is_symlink():
+        destination = backups / ("life-notes-" + label + ".json")
+        fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as writer, notes.open("rb") as reader:
+                shutil.copyfileobj(reader, writer, length=8192)
+                writer.flush()
+                os.fsync(writer.fileno())
+            os.chmod(destination, 0o600)
+            print("local_life_notes_backup:", "ok")
+        except BaseException:
+            destination.unlink(missing_ok=True)
+            raise
+
+
 def main() -> None:
     if sys.argv[1:] == ["--inside-volume"]:
         write_backup()
+        backup_life_state()
         return
     if len(sys.argv) != 1:
         raise SystemExit("Usage: python3 scripts/backup_sqlite_db.py")
