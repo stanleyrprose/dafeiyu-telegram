@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Consistent SQLite backup from the live Docker volume, without exporting secrets.
+"""Consistent SQLite and private configuration backup from the Docker volume.
 
 Use from Mac project root: python3 scripts/backup_sqlite_db.py
-Backups are stored under private/db-backups/ with owner-only permissions.
+Backups include sensitive AstrBot configuration; keep private/db-backups/ owner-only.
+Never print, publish, or upload these files to Git.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -86,10 +88,85 @@ def backup_life_state(
             raise
 
 
+def backup_livingmemory_files(
+    root: Path = Path("/data"),
+    backups: Path = Path("/backups"),
+) -> None:
+    """Backup the third-party memory index/graph atomically when AstrBot is stopped."""
+    folders = [
+        root / "plugin_data" / "astrbot_plugin_livingmemory",
+        root / "plugin_data" / "livingmemory",
+        root / "plugins" / "astrbot_plugin_livingmemory",
+    ]
+    config = root / "config" / "astrbot_plugin_livingmemory_config.json"
+    if not any(source.is_dir() for source in folders) and not config.is_file():
+        return
+    targets = []
+    total = 0
+    for source in folders:
+        if source.is_symlink():
+            raise ValueError("Refusing symlink to LivingMemory directory")
+        if not source.is_dir():
+            continue
+        for path in source.rglob("*"):
+            if path.is_symlink():
+                raise ValueError("Refusing symlink in LivingMemory backup")
+            if path.is_file():
+                total += path.stat().st_size
+                targets.append((path, str(source.relative_to(root)) + "/" +
+                                str(path.relative_to(source))))
+    if config.is_file():
+        if config.is_symlink():
+            raise ValueError("Refusing plugin config symlink")
+        targets.append((config, "config/astrbot_plugin_livingmemory_config.json"))
+    if len(targets) > 12000 or total > 1024 * 1024 * 1024:
+        raise ValueError("LivingMemory data exceeds bounded backup size")
+    label = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    target = backups / ("livingmemory-" + label + ".tar.gz")
+    fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            with tarfile.open(fileobj=stream, mode="w:gz") as archive:
+                for path, relative in targets:
+                    archive.add(path, arcname=relative, recursive=False)
+        os.chmod(target, 0o600)
+        print("livingmemory_snapshot:", "ok", "files:", len(targets))
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
+
+
+def backup_astrbot_config(
+    root: Path = Path("/data"),
+    backups: Path = Path("/backups"),
+) -> None:
+    """Private snapshot of original provider/token config needed for safe rollback."""
+    source = root / "cmd_config.json"
+    if not source.is_file() or source.is_symlink():
+        raise ValueError("Private AstrBot config missing or unsafe")
+    if source.stat().st_size > 2 * 1024 * 1024:
+        raise ValueError("AstrBot config is unexpectedly large")
+    label = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    target = backups / ("cmd-config-" + label + ".json")
+    fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as writer, source.open("rb") as reader:
+            shutil.copyfileobj(reader, writer, length=8192)
+            writer.flush()
+            os.fsync(writer.fileno())
+        os.chmod(target, 0o600)
+        print("private_config_backup:", "ok")
+    except BaseException:
+        target.unlink(missing_ok=True)
+        raise
+
+
 def main() -> None:
     if sys.argv[1:] == ["--inside-volume"]:
         write_backup()
+        backup_astrbot_config()
         backup_life_state()
+        backup_livingmemory_files()
         return
     if len(sys.argv) != 1:
         raise SystemExit("Usage: python3 scripts/backup_sqlite_db.py")
@@ -110,6 +187,6 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (OSError, sqlite3.Error, subprocess.CalledProcessError, RuntimeError) as exc:
+    except (OSError, sqlite3.Error, subprocess.CalledProcessError, RuntimeError, ValueError) as exc:
         print("backup_failed_type:", type(exc).__name__, file=sys.stderr)
         raise SystemExit(1)

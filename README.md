@@ -1,4 +1,4 @@
-# 大肥鱼 Telegram — ChatGPT SIWC 单用户版本
+# 大肥鱼 Telegram — 单用户 SIWC 与自治生活助手
 
 基于 [whyever77/dafeiyu-astrbot](https://github.com/whyever77/dafeiyu-astrbot) 的角色设定及记忆/生活节律设计整理的精简自托管版本。原项目按 MIT 许可证授权，详见 [LICENSE](LICENSE)。
 
@@ -38,6 +38,17 @@
 搜索词会提交给第三方公共搜索引擎；请勿提交客户机密或个人敏感信息。/read 只读取公开 HTTPS 文字网页，限制下载大小并拒绝内网/私有地址，**不是浏览器自动化**。/research 基于检索摘要回答，不能伪称逐篇阅读全文。
 
 提醒自动投递遵循 at-most-once 原则；结果不确定时为 unknown，不会默默重发。须先人工确认，再用 /retry，避免重复通知。
+
+## v3 新功能（当前开发分支，尚未验收或部署）
+
+- **LivingMemory + 本地 Embedding**：官方 LivingMemory 2.9.1 固定版本，连接 Mac 上已有的 Ollama `bge-m3`（1024维）。保留手动 `/remember`，启用插件后使用 `/lmem status`、`/lmem search 关键词`，原来的自动提取停用，避免重复记忆。
+- **主动聊天**：`/proactive on`、`/proactive off`、`/proactive status`、`/proactive reset`。本地 23:00—08:00 静默、4 小时内刚聊过则不主动联系、上一条未回应则暂停、每天最多一次；主动关怀和探索共用日额度。
+- **X / Reddit 自主探索**：`/explore add x AI agents`、`/explore add reddit 5G RAN`、`/explore on`、`/explore list`、`/explore now`、`/explore remove 1`、`/explore off`。启用后每日13:00查询公开搜索索引中的原站帖子链接，仅分享新链接，不收集登录 Cookie、不冒充平台 API 实时数据。
+- **真实日程感知**：`/event 2026-11-10 09:00 60 项目会议` 创建，`/moveevent 3 2026-11-10 10:00 60` 改期，`/eventcancel 3` 取消，`/agenda` 读取本地真实日程与任务。关联提醒与日程联动，模型每轮获得可核验的主人日程和本 Bot Cron。
+
+新增功能默认不擅自打开主动搜索和主动聊天；需要主人明确发送 `/explore on` 和 `/proactive on`。第三方官方 API 登录/授权不属于默认公开索引模式。外部日历（Google、Apple、Outlook）不会被假设已连接。
+
+实施约束与验收标准：[v3 GOAL](docs/GOAL_LIVINGMEMORY_AUTONOMY.md)。**GitHub 开发分支的功能不可当作已上线生产能力。**
 
 ## 安全边界
 

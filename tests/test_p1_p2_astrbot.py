@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 try:
     from data.plugins.astrbot_plugin_dafeiyu_local_life.main import LocalLife
-    from data.plugins.astrbot_plugin_dafeiyu_local_life.state import LifeStore
+    from data.plugins.astrbot_plugin_dafeiyu_local_life.autonomy_state import AutonomyStore
     RUNTIME_AVAILABLE = True
 except ModuleNotFoundError:
     RUNTIME_AVAILABLE = False
@@ -25,13 +25,14 @@ class LocalLifeAstrBotCases(unittest.IsolatedAsyncioTestCase):
         self.plugin = object.__new__(LocalLife)
         self.plugin.umo = "telegram_owner:FriendMessage:12345"
         self.plugin.tz = "Asia/Shanghai"
-        self.plugin.db = LifeStore(directory / "state.sqlite3")
+        self.plugin.db = AutonomyStore(directory / "state.sqlite3")
         self.plugin.db.initialize()
         self.plugin.notes_file = directory / "notes.json"
         self.plugin._notes_lock = asyncio.Lock()
         self.plugin._capture_lock = asyncio.Lock()
         self.plugin._background = set()
         self.plugin._last_capture = 0.0
+        self.plugin._outreach_lock = asyncio.Lock()
         self.plugin._cron_ids = []
         self.plugin.context = SimpleNamespace(
             send_message=AsyncMock(return_value=True),
@@ -105,13 +106,17 @@ class LocalLifeAstrBotCases(unittest.IsolatedAsyncioTestCase):
             add_basic_job=AsyncMock(side_effect=[
                 SimpleNamespace(job_id="r1"),
                 SimpleNamespace(job_id="n1"),
+                SimpleNamespace(job_id="p1"),
+                SimpleNamespace(job_id="c1"),
             ]),
         )
         await self.plugin.schedule()
-        self.assertEqual(self.plugin.context.cron_manager.add_basic_job.await_count, 2)
+        self.assertEqual(self.plugin.context.cron_manager.add_basic_job.await_count, 4)
         args = self.plugin.context.cron_manager.add_basic_job.call_args_list
         self.assertEqual(args[0].kwargs["cron_expression"], "* * * * *")
         self.assertEqual(args[1].kwargs["cron_expression"], "0 10 * * *")
+        self.assertEqual(args[2].kwargs["cron_expression"], "0,30 * * * *")
+        self.assertEqual(args[3].kwargs["cron_expression"], "0 13 * * *")
 
     async def test_nudge_preview_needs_real_task(self):
         self.plugin.db.add_task("todo", "优先处理项目A")

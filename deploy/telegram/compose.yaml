@@ -4,7 +4,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/telegram/Dockerfile
-    image: dafeiyu-telegram-runtime:v2.0.0
+    image: dafeiyu-telegram-runtime:v3.0.0
     container_name: dafeiyu-telegram
     restart: unless-stopped
     ports:
@@ -15,6 +15,7 @@ services:
       DAFEIYU_OWNER_USER_ID: ${DAFEIYU_OWNER_USER_ID:?Set your Telegram numeric user ID}
       DAFEIYU_RHYTHM_HOUR: ${DAFEIYU_RHYTHM_HOUR:-10}
       DAFEIYU_RHYTHM_TZ: ${DAFEIYU_RHYTHM_TZ:-Asia/Shanghai}
+      DAFEIYU_LIVINGMEMORY_ENABLED: ${DAFEIYU_LIVINGMEMORY_ENABLED:-false}
     volumes:
       - dafeiyu_data:/AstrBot/data
       - ../../private/oauth:/AstrBot/private/oauth
