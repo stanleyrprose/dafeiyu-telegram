@@ -2,7 +2,7 @@
 
 ## 当前授权与成功标准
 
-在已上线 v2 的 Telegram 单 Owner + SIWC + AstrBot v4.29.4 + 单容器上实现下列四项功能；不修改原 QQ/NapCat，不破坏现有数据库和已保存的 `notes.json`。用户本轮授权实现，没有额外授权第三方账号登录、付费 API 或生产部署。
+在已上线 v2 的 Telegram 单 Owner + SIWC + AstrBot v4.29.4 + 单容器上实现下列四项功能；不修改原 QQ/NapCat，不破坏现有数据库和已保存的 `notes.json`。用户已于 2026-11-06 进一步明确授权集中验收、PR/CI/Merge 与 Mac mini 生产部署；仍未授权第三方平台账号登录、付费 API 或突破隐私与网络安全门禁。
 
 1. **LivingMemory + Embedding**：使用官方 LivingMemory 2.9.1，源固定到 Git commit 1c6a471c9af9ae45a4ccb3a8cec5695c917de50b；embedding 为 Mac 既有本地 Ollama `bge-m3:latest`，1024维，经 AstrBot 的 OpenAI-compatible Embedding Provider。插件与数据位于 Docker Volume，并保持其独立 AGPL 许可。`/lmem status` 和 `/lmem search` 能返回真实结果才算验收；保留 `/remember` 原本手动笔记，LivingMemory 激活时停止旧的自动摘录，避免双写。
 2. **主动联系和生活节律**：通过 `/proactive on/off/status/reset` 显式启用；当地时间 23:00—08:00 不发，最近4小时内有互动不发，前次未回应不发；每日最多一次，分享、探索与旧每日关怀共享同一联系额度。未成功发送/超时保留未知状态，不自动重复。
