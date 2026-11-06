@@ -1,7 +1,7 @@
 name: astrbot_plugin_dafeiyu_local_life
 display_name: 大肥鱼本地生活助手
-desc: 单用户提醒与待办、证据限定的自动记忆、只读公网检索和依据任务的主动关怀
-version: v2.0.0
+desc: 单用户本地日程、低频主动聊天、受限X/Reddit社区探索、只读公网检索和任务管理
+version: v3.0.0
 author: dafeiyu-adaptation
 support_platforms:
   - telegram_owner
