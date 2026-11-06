@@ -16,9 +16,11 @@ services:
       DAFEIYU_RHYTHM_HOUR: ${DAFEIYU_RHYTHM_HOUR:-10}
       DAFEIYU_RHYTHM_TZ: ${DAFEIYU_RHYTHM_TZ:-Asia/Shanghai}
       DAFEIYU_LIVINGMEMORY_ENABLED: ${DAFEIYU_LIVINGMEMORY_ENABLED:-false}
+      DAFEIYU_BROWSER_PLANE_ENABLED: ${DAFEIYU_BROWSER_PLANE_ENABLED:-false}
     volumes:
       - dafeiyu_data:/AstrBot/data
       - ../../private/oauth:/AstrBot/private/oauth
+      - ../../private/browser-plane-bridge:/AstrBot/browser-plane-bridge:rw
       - ../../plugin/astrbot_plugin_dafeiyu_siwc:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_siwc:ro
       - ../../plugin/astrbot_plugin_dafeiyu_local_life:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_local_life:ro
       - ../../persona/大肥鱼-Telegram.md:/AstrBot/persona/dafeiyu.md:ro

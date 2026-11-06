@@ -22,7 +22,8 @@ from .autonomy_state import AutonomyStore
 from .calendar_policy import event_interval, display_utc, is_quiet_time, scheduled_contact_slot
 from .social_discovery import safe_topic, indexed_posts, format_discovery
 from .policy import IDENTIFIER, PRIVATE_TERMS, daily_nudge, format_due, parse_reminder, safe_memory
-from .web_read import UnsafeURL, fetch_public_page, public_search
+from .web_read import public_search
+from .browser_plane_client import BrowserPlaneReadError, acquire_public_page
 
 
 @register(
@@ -600,18 +601,34 @@ class LocalLife(Star):
         if not self._is_owner(event):
             return
         try:
-            async with asyncio.timeout(25):
-                final_url, content = await asyncio.to_thread(fetch_public_page, str(url).strip())
+            async with asyncio.timeout(112):
+                final_url, content, engine = await asyncio.to_thread(
+                    acquire_public_page, str(url).strip()
+                )
             if not content.strip():
-                yield event.plain_result("该网页没有可读取的正文（可能需要登录或 JavaScript）。")
+                yield event.plain_result("Mac Browser Plane 没有返回可读取的网页正文。")
                 return
-            yield event.plain_result("公开网页摘录（未经独立事实核查）：\n" +
-                                     final_url + "\n\n" + content[:2600])
-        except (UnsafeURL, ValueError) as exc:
+            yield event.plain_result(
+                "Mac Browser Plane 公开网页摘录（未经独立事实核查）：\n"
+                + final_url + "\n获取引擎：" + engine + "\n\n" + content[:2600]
+            )
+        except BrowserPlaneReadError as exc:
             yield event.plain_result("无法读取：" + str(exc))
         except Exception as exc:
-            logger.warning("[local_life] read-only fetch failed (%s)", type(exc).__name__)
-            yield event.plain_result("公开网页读取失败；不会尝试登录、绕过限制或执行脚本。")
+            logger.warning("[local_life] Mac Browser Plane read failed (%s)", type(exc).__name__)
+            yield event.plain_result("Mac Browser Plane 网页读取暂不可用；不会自动改用其他网页通道。")
+
+    @filter.regex(r"^(?:请|帮我)?(?:打开|读一下|阅读|看看|查看|分析一下)\s*(?:这个|这篇|网页|网站|页面|链接)?\s*https://\S+\s*$")
+    async def natural_read_page(self, event: AstrMessageEvent):
+        if not self._is_owner(event):
+            return
+        match = re.search(r"https://\S+", event.get_message_str().strip())
+        if match is None:
+            return
+        event.stop_event()
+        url = match.group(0).rstrip("。！!，,")
+        async for result in self.read_page(event, url):
+            yield result
 
     @filter.command("research")
     async def research(self, event: AstrMessageEvent, question: GreedyStr):
