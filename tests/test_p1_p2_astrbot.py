@@ -118,6 +118,22 @@ class LocalLifeAstrBotCases(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args[2].kwargs["cron_expression"], "0,30 * * * *")
         self.assertEqual(args[3].kwargs["cron_expression"], "0 13 * * *")
 
+    async def test_natural_web_read_routes_to_browser_plane_command(self):
+        self.event.get_message_str = lambda: "帮我打开 https://example.com"
+        called = []
+
+        async def fake_read(event, url):
+            called.append(url)
+            yield "Mac Browser Plane read"
+        original = self.plugin.read_page
+        try:
+            self.plugin.read_page = fake_read
+            replies = await self.collect(self.plugin.natural_read_page(self.event))
+        finally:
+            self.plugin.read_page = original
+        self.assertEqual(called, ["https://example.com"])
+        self.assertEqual(replies, ["Mac Browser Plane read"])
+
     async def test_nudge_preview_needs_real_task(self):
         self.plugin.db.add_task("todo", "优先处理项目A")
         data = await self.collect(self.plugin.nudge(self.event, "now"))

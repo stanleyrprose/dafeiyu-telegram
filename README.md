@@ -56,6 +56,10 @@ Owner 数字 ID 必须与 Telegram 私聊的发送者和聊天 ID 同时匹配�
 
 凭据与本地部署环境文件位于 Git 忽略的 private/ 目录；运行数据库与笔记位于独立 Docker Volume（容器内 /AstrBot/data），不进入 Git。不要将本机 `credentials.json`、Bot Token、聊天历史或运行日志提交到公共仓库。
 
+## Mac Browser Plane 只读网页接入（开发分支）
+
+新的 `/read URL` 和明确的「帮我打开 https://…」单网址读取指令通过 Mac mini 已有 Browser Plane 的 `browser_acquire`，C0 优先、必要时才执行 C1。跨 Docker 采用本机私有文件队列与 launchd 按需唤醒的一次性桥接，不增加网络端口，不开放 SIWC Function Calling。缺少桥接时明确失败，不再自动回退旧 HTTP 读取。此项尚未完成 Phase V/R 或部署，**生产 v3 当前仍按已发布代码运行**。边界、验收及回滚见 [Browser Plane 接入文档](docs/BROWSER_PLANE_READ.md)。
+
 ## 安装与验收
 
 按 [Mac mini 部署说明](deploy/telegram/README.md) 操作。首次启动容器生成默认配置后需停止容器、运行离线配置脚本、再启动。对外访问仅使用 Telegram，WebUI 端口只绑定 Mac 的 `127.0.0.1:6185`。
