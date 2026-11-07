@@ -13,8 +13,8 @@
 Telegram Owner /read URL
   → AstrBot local_life (SIWC 仍为 text-only)
   → /AstrBot/browser-plane-bridge/requests/<uuid>.json
-  → Mac bind-mounted private/browser-plane-bridge/requests/
-  → launchd QueueDirectories 唤醒一次性 Host Worker
+  → Mac bind-mounted ~/Library/Application Support/dafeiyu-browser-plane/requests/
+  → launchd WatchPaths 唤醒 App Support 内的一次性 Host Worker
   → 已安装的 mac-browser-mcp-call call browser_acquire (stdio)
   → Browser Plane 原 JobStore / Worker / C0→必要时 C1
   → 读取并校验 Browser Plane 自有 evidence artifact
@@ -22,7 +22,7 @@ Telegram Owner /read URL
   → AstrBot 最多读取 9000 字符，Telegram 展示前 2600 字符
 ```
 
-LaunchAgent 只有存在未处理请求时才触发，不常驻轮询；Bridge 不开放 TCP/HTTP、Docker socket、SSH、浏览器 Profile、任意 MCP tool 或任意 shell 命令。桥接目录由用户 Mac 主机持有，默认 0700、响应 0600，整个 `private/` 被 Git 忽略。每次请求采用 UUID、原子文件写入、过期时间、单处理器文件锁；读取任务即使中断可重试，因为不允许网页写操作。响应仅返回 URL/正文/引擎/Job ID，不回传本地 evidence 路径、OAuth/Telegram 凭据。
+LaunchAgent 在请求目录发生文件变更时按需触发（空队列会直接退出），不常驻轮询；Bridge 不开放 TCP/HTTP、Docker socket、SSH、浏览器 Profile、任意 MCP tool 或任意 shell 命令。桥接目录在用户 `~/Library/Application Support/dafeiyu-browser-plane/` 内，默认 0700、响应 0600；launchd 运行脚本也原子复制到同一私有目录，避免后台 Python 打开 Documents 中源码时受 macOS 文件访问保护阻塞。源码仓库 `private/` 仍由 Git 忽略。每次请求采用 UUID、原子文件写入、过期时间、单处理器文件锁；读取任务即使中断可重试，因为不允许网页写操作。响应仅返回 URL/正文/引擎/Job ID，不回传本地 evidence 路径、OAuth/Telegram 凭据。
 
 ## 安全与边界
 
@@ -36,12 +36,12 @@ LaunchAgent 只有存在未处理请求时才触发，不常驻轮询；Bridge �
 
 1. 在 Mac mini 先检查 `~/agent-browser-runtime/app/venv/bin/mac-browser-mcp-call` 与 Browser Plane 的已安装 MCP 版本，确认 `browser_acquire` 可用；检查此项目在已发布分支的更改经过 Phase V/R。
 2. 停止**仅** `dafeiyu-telegram` 服务，并按现有 v3 Runbook 对核心 SQLite、life SQLite、notes、config 做私有一致性备份，不删除 Volume。
-3. 在**已发布的本机 checkout** 执行 `python3 scripts/install_browser_plane_bridge.py install`，配置 launchd QueueDirectories。该脚本负责私有队列创建和 LaunchAgent 注册；不写入 Browser Plane 仓库。
-4. 将 `DAFEIYU_BROWSER_PLANE_ENABLED=true` 添加到 Mac 本地、Git 忽略的 `private/deploy.env`，用相同 Compose 及原 Volume 启动更新后的 Bot；不可把 deploy.env、Token 或 Browser Plane artifacts 复制进 Git。
+3. 在**已发布的本机 checkout** 执行 `python3 scripts/install_browser_plane_bridge.py install`，配置 launchd WatchPaths；脚本与请求目录安装在 `~/Library/Application Support/dafeiyu-browser-plane/`，不触碰 Browser Plane 仓库。若未来修复 Broker 代码，需先 `uninstall` 再 `install` 更新运行副本。
+4. 将 `DAFEIYU_BROWSER_PLANE_ENABLED=true`、`DAFEIYU_BROWSER_PLANE_HOST_DIR=$HOME/Library/Application Support/dafeiyu-browser-plane`（用实际绝对路径，不在 Docker Compose 环境变量内保留 `$HOME` 文本）添加到 Git 忽略的 `private/deploy.env`；同一 Compose 与原 Volume 启动更新后的 Bot。不可把 deploy.env、Token 或 Browser Plane artifacts 复制进 Git。
 5. 集中验收：Owner `/read https://example.com`→有真实标题/文本且 engine 来源明确；再检查 JS 页面、有界超时、禁止 localhost/私网 URL、非 Owner 沉默、Broker 未运行 fail-closed、Bot 重启及原有记忆和提醒回归；核对 host bridge 无隐形持续轮询。不能用静态检查取代这些真实证据。
 
 ## 回滚
 
 - 首先将私有环境变量 `DAFEIYU_BROWSER_PLANE_ENABLED=false`，仅重启 Bot 使读取明确返回「未启用」。保留旧网页 HTTP 提取函数供源码回滚使用，但**新读网页命令不自动降级调用它**。
-- 必要时执行 `python3 scripts/install_browser_plane_bridge.py uninstall`，卸载该独立 LaunchAgent；不清除队列以便人工调查，亦不影响已有 Browser Plane Worker。
+- 必要时执行 `python3 scripts/install_browser_plane_bridge.py uninstall`，卸载该独立 LaunchAgent；App Support 下的运行脚本及队列保留以便人工调查，不影响已有 Browser Plane Worker。
 - 回滚 Bot 源代码与 Compose 按现有 v3 发布程序执行，**不得** `docker compose down -v`、删除 livingmemory/notes 或碰原 QQ/NapCat。

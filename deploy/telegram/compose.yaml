@@ -20,7 +20,7 @@ services:
     volumes:
       - dafeiyu_data:/AstrBot/data
       - ../../private/oauth:/AstrBot/private/oauth
-      - ../../private/browser-plane-bridge:/AstrBot/browser-plane-bridge:rw
+      - ${DAFEIYU_BROWSER_PLANE_HOST_DIR:?Set private Mac Browser Plane bridge directory}:/AstrBot/browser-plane-bridge:rw
       - ../../plugin/astrbot_plugin_dafeiyu_siwc:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_siwc:ro
       - ../../plugin/astrbot_plugin_dafeiyu_local_life:/AstrBot/data/plugins/astrbot_plugin_dafeiyu_local_life:ro
       - ../../persona/大肥鱼-Telegram.md:/AstrBot/persona/dafeiyu.md:ro
