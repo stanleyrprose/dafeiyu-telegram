@@ -11,6 +11,7 @@ import re
 import time
 import uuid
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .web_read import _public_target
 
@@ -38,6 +39,12 @@ def extract_read_url(message: str) -> str:
     if not 9 < len(target) <= 2048:
         raise BrowserPlaneReadError("HTTPS 网页链接无效或过长。")
     return target
+
+
+def _requires_cloudflare_access_login(url: str) -> bool:
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    return host.endswith(".cloudflareaccess.com") or parsed.path.startswith("/cdn-cgi/access/")
 
 
 def _atomic_json(path: Path, payload: dict) -> None:
@@ -107,6 +114,8 @@ def acquire_public_page(url: str, *, timeout_sec: float = 100.0) -> tuple[str, s
                 )
                 if not all(isinstance(x, str) for x in (final_url, content, engine)):
                     raise BrowserPlaneReadError("Mac Browser Plane 回执缺少正文")
+                if _requires_cloudflare_access_login(final_url):
+                    raise BrowserPlaneReadError("目标网站需要 Cloudflare Access 登录，当前只能读取公开网页。")
                 try:
                     _public_target(final_url)
                 except (ValueError, OSError) as exc:

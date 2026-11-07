@@ -101,6 +101,25 @@ class BrowserPlaneClientTests(unittest.TestCase):
         self.assertEqual(list((self.root / "requests").glob("*.json")), [])
         self.assertEqual(list((self.root / "responses").glob("*.json")), [])
 
+    def test_cloudflare_access_login_is_not_returned_as_page_content(self):
+        original = client._atomic_json
+
+        def place_login_response(path, data):
+            original(path, data)
+            original(self.root / "responses" / (data["id"] + ".json"), {
+                "id": data["id"],
+                "ok": True,
+                "url": "https://login.cloudflareaccess.com/cdn-cgi/access/login/sample?meta=opaque",
+                "text": "Log in to protected site",
+                "engine": "c0-fetch",
+            })
+        with patch.object(client, "_public_target", return_value=("", "", "")), patch.object(
+            client, "_atomic_json", side_effect=place_login_response
+        ):
+            with self.assertRaisesRegex(client.BrowserPlaneReadError, "Cloudflare Access 登录"):
+                client.acquire_public_page("https://protected.example.com", timeout_sec=1)
+        self.assertFalse(list((self.root / "responses").glob("*.json")))
+
     def test_bridge_failure_does_not_fallback_to_http(self):
         original = client._atomic_json
 
