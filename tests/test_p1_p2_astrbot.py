@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 try:
     from data.plugins.astrbot_plugin_dafeiyu_local_life.main import LocalLife
@@ -119,7 +119,7 @@ class LocalLifeAstrBotCases(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args[3].kwargs["cron_expression"], "0 13 * * *")
 
     async def test_natural_web_read_routes_to_browser_plane_command(self):
-        self.event.get_message_str = lambda: "帮我打开 https://example.com"
+        self.event.get_message_str = lambda: "帮我打开 https://example.com. 我想学习这网站所说的6个能力"
         called = []
 
         async def fake_read(event, url):
@@ -133,6 +133,20 @@ class LocalLifeAstrBotCases(unittest.IsolatedAsyncioTestCase):
             self.plugin.read_page = original
         self.assertEqual(called, ["https://example.com"])
         self.assertEqual(replies, ["Mac Browser Plane read"])
+
+    async def test_read_page_only_passes_url_to_browser_plane(self):
+        raw = (
+            "https://personal-decision-os.pages.dev/?utm_source=chatgpt.com. "
+            "我想学习这网站所说的6个能力"
+        )
+        expected = "https://personal-decision-os.pages.dev/?utm_source=chatgpt.com"
+        with patch(
+            "data.plugins.astrbot_plugin_dafeiyu_local_life.main.acquire_public_page",
+            return_value=(expected, "Six key abilities", "c0-fetch"),
+        ) as acquire:
+            replies = await self.collect(self.plugin.read_page(self.event, raw))
+        acquire.assert_called_once_with(expected)
+        self.assertIn("Six key abilities", replies[0])
 
     async def test_nudge_preview_needs_real_task(self):
         self.plugin.db.add_task("todo", "优先处理项目A")

@@ -27,6 +27,38 @@ def load_host_worker():
     return module
 
 
+class ReadURLExtractionTests(unittest.TestCase):
+    def test_url_with_chinese_instruction_is_not_forwarded_as_one_url(self):
+        input_text = (
+            "https://personal-decision-os.pages.dev/?utm_source=chatgpt.com. "
+            "我想学习这网站所说的6个能力"
+        )
+        self.assertEqual(
+            client.extract_read_url(input_text),
+            "https://personal-decision-os.pages.dev/?utm_source=chatgpt.com",
+        )
+
+    def test_mixed_read_formats_preserve_valid_url(self):
+        examples = {
+            "https://example.com/news?id=42&lang=zh": "https://example.com/news?id=42&lang=zh",
+            "帮我打开 https://example.com/path，分析内容": "https://example.com/path",
+            "请读一下 [新闻](https://example.com/news?q=a%20b)": "https://example.com/news?q=a%20b",
+            "https://example.com/report。请总结": "https://example.com/report",
+        }
+        for raw, expected in examples.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(client.extract_read_url(raw), expected)
+
+    def test_ambiguous_or_non_https_urls_rejected(self):
+        for raw in (
+            "",
+            "http://example.com",
+            "https://example.com 以及 https://another.example.com",
+        ):
+            with self.subTest(raw=raw), self.assertRaises(client.BrowserPlaneReadError):
+                client.extract_read_url(raw)
+
+
 class BrowserPlaneClientTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

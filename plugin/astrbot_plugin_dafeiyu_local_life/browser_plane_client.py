@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import uuid
 from pathlib import Path
@@ -16,6 +17,27 @@ from .web_read import _public_target
 
 class BrowserPlaneReadError(RuntimeError):
     """Sanitized user-facing browser transport failure."""
+
+
+_URL_TOKEN = re.compile(r"https://[^\s<>\"'`，。！？；：、（）【】《》]+", re.IGNORECASE)
+_TRAILING_SENTENCE_PUNCTUATION = ".,!?;:)]}”’"
+
+
+def extract_read_url(message: str) -> str:
+    """Pick one HTTPS URL, excluding accompanying /read instructions.
+
+    /read takes a GreedyStr, so the user's prose must never become part of the
+    URL forwarded to the Mac Browser Plane.
+    """
+    if not isinstance(message, str) or len(message) > 6000:
+        raise BrowserPlaneReadError("请提供一个 HTTPS 网页链接。")
+    candidates = _URL_TOKEN.findall(message)
+    if len(candidates) != 1:
+        raise BrowserPlaneReadError("请一次提供一个 HTTPS 网页链接，不要包含多个网址。")
+    target = candidates[0].rstrip(_TRAILING_SENTENCE_PUNCTUATION)
+    if not 9 < len(target) <= 2048:
+        raise BrowserPlaneReadError("HTTPS 网页链接无效或过长。")
+    return target
 
 
 def _atomic_json(path: Path, payload: dict) -> None:

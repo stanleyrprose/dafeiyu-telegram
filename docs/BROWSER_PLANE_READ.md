@@ -30,6 +30,7 @@ LaunchAgent 在请求目录发生文件变更时按需触发（空队列会直�
 - Browser Plane `browser_acquire` 是 C0 优先，只有在既有判定满足时才进入 C1，不保证所有 JavaScript/登录墙/反爬页面可读。普通认证或限流失败不自动升级 C2/C3。
 - 并发由宿主文件锁及既有 Browser Plane JobStore 管控。请求有总等待上限，超时不绕过浏览器平面抓取；晚到结果会在后续清理中回收。
 - Docker Desktop bind mount 和 macOS launchd 事件通知的跨虚拟化可见性尚待真实验收。若不可达/事件丢失，Bot 有界超时并提示，不启用备用 HTTP 或无审计的网络代理。
+- `/read` 接收一个 HTTPS URL，也允许在 URL 前后附带中文阅读说明；只将解析出的单个 URL（保留 Query、剔除自然语言与句末标点）交给 Browser Plane，多个 URL 会明确拒绝，避免错读。附带的学习/总结要求目前不会自动进入 LLM 分析，`/read` 仍只返回网页摘录。
 - `/search` 与 `/research` 仍由 DDGS 提供公开搜索摘要，不能当成已使用 Browser Plane 读过每篇正文。
 
 ## 发布时操作（未执行）
