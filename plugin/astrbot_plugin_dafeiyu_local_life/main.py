@@ -23,7 +23,7 @@ from .calendar_policy import event_interval, display_utc, is_quiet_time, schedul
 from .social_discovery import safe_topic, indexed_posts, format_discovery
 from .policy import IDENTIFIER, PRIVATE_TERMS, daily_nudge, format_due, parse_reminder, safe_memory
 from .web_read import public_search
-from .browser_plane_client import BrowserPlaneReadError, acquire_public_page
+from .browser_plane_client import BrowserPlaneReadError, acquire_public_page, extract_read_url
 
 
 @register(
@@ -603,7 +603,7 @@ class LocalLife(Star):
         try:
             async with asyncio.timeout(112):
                 final_url, content, engine = await asyncio.to_thread(
-                    acquire_public_page, str(url).strip()
+                    acquire_public_page, extract_read_url(str(url).strip())
                 )
             if not content.strip():
                 yield event.plain_result("Mac Browser Plane 没有返回可读取的网页正文。")
@@ -618,15 +618,17 @@ class LocalLife(Star):
             logger.warning("[local_life] Mac Browser Plane read failed (%s)", type(exc).__name__)
             yield event.plain_result("Mac Browser Plane 网页读取暂不可用；不会自动改用其他网页通道。")
 
-    @filter.regex(r"^(?:请|帮我)?(?:打开|读一下|阅读|看看|查看|分析一下)\s*(?:这个|这篇|网页|网站|页面|链接)?\s*https://\S+\s*$")
+    @filter.regex(r"^(?:请|帮我)?(?:打开|读一下|阅读|看看|查看|分析一下)\s*(?:这个|这篇|网页|网站|页面|链接)?\s*https://\S+(?:\s+.*)?$")
     async def natural_read_page(self, event: AstrMessageEvent):
         if not self._is_owner(event):
             return
-        match = re.search(r"https://\S+", event.get_message_str().strip())
-        if match is None:
+        try:
+            url = extract_read_url(event.get_message_str())
+        except BrowserPlaneReadError as exc:
+            event.stop_event()
+            yield event.plain_result("无法读取：" + str(exc))
             return
         event.stop_event()
-        url = match.group(0).rstrip("。！!，,")
         async for result in self.read_page(event, url):
             yield result
 
