@@ -140,5 +140,23 @@ class MacWorkerTests(unittest.TestCase):
         self.assertEqual(result["engine"], "c0-fetch")
 
 
+class HostLaunchdContractTests(unittest.TestCase):
+    def test_installed_worker_and_queue_live_outside_documents(self):
+        target = Path(__file__).resolve().parents[1] / "scripts" / "install_browser_plane_bridge.py"
+        spec = importlib.util.spec_from_file_location("_dafeiyu_launchd_under_test", target)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with patch.object(Path, "home", return_value=Path("/Users/fixture")):
+            _, root, _, _ = module._paths()
+        self.assertEqual(
+            root,
+            Path("/Users/fixture/Library/Application Support/dafeiyu-browser-plane"),
+        )
+        compose = (Path(__file__).resolve().parents[1] / "deploy" / "telegram" / "compose.yaml").read_text()
+        self.assertIn("DAFEIYU_BROWSER_PLANE_HOST_DIR", compose)
+        self.assertIn('"WatchPaths": [str(root / "requests")]', target.read_text())
+        self.assertNotIn("../../private/browser-plane-bridge:/AstrBot/browser-plane-bridge", compose)
+
+
 if __name__ == "__main__":
     unittest.main()
